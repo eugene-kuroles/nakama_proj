@@ -1,52 +1,47 @@
 /**
  * 🎨 Глобальные стили игры Snake
- * 
- * Дизайн: Neon/Cyberpunk с неоновыми цветами на тёмном фоне
+ * Дизайн: Neon/Cyberpunk
  */
 
 /* ==============================================================================
-   CSS ПЕРЕМЕННЫЕ (цвета, шрифты, размеры)
+   CSS ПЕРЕМЕННЫЕ
    ============================================================================== */
 
 :root {
-  /* Основные цвета */
   --bg-primary: #0a0a0f;
   --bg-secondary: #12121a;
   --bg-tertiary: #1a1a25;
   
-  /* Цвета змейки */
   --snake-head: #00ff88;
   --snake-body: #00cc6a;
   --snake-tail: #009955;
   --snake-glow: rgba(0, 255, 136, 0.4);
   
-  /* Цвет еды */
   --food-color: #ff3366;
   --food-glow: rgba(255, 51, 102, 0.5);
   
-  /* Текст */
+  --obstacle-color: #ff6b6b;
+  --obstacle-glow: rgba(255, 107, 107, 0.5);
+  
   --text-primary: #ffffff;
   --text-secondary: #a0a0b0;
   --text-accent: #00ff88;
   --text-danger: #ff3366;
   
-  /* Эффекты */
   --border-glow: rgba(0, 255, 136, 0.3);
   --shadow-neon: 0 0 20px rgba(0, 255, 136, 0.3);
   
-  /* Шрифты */
   --font-display: 'Orbitron', sans-serif;
   --font-body: 'Rajdhani', sans-serif;
   --font-score: 'Press Start 2P', cursive;
   
-  /* Размеры */
   --border-radius: 12px;
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s ease;
 }
 
 /* ==============================================================================
-   RESET И БАЗОВЫЕ СТИЛИ
+   RESET
    ============================================================================== */
 
 * {
@@ -57,38 +52,81 @@
 
 html, body {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 body {
   font-family: var(--font-body);
   background: var(--bg-primary);
   color: var(--text-primary);
-  
-  /* Градиентный фон */
   background: 
     radial-gradient(ellipse at top, #1a1a2e 0%, transparent 50%),
     radial-gradient(ellipse at bottom, #16213e 0%, transparent 50%),
     var(--bg-primary);
-  
-  /* Центрирование */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
 }
 
 #root {
   width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  min-height: 100vh;
 }
 
 /* ==============================================================================
-   ГЛАВНЫЙ КОНТЕЙНЕР ИГРЫ
+   APP LAYOUT
+   ============================================================================== */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.app-layout {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.server-warning {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  background: rgba(255, 51, 102, 0.9);
+  color: white;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(255, 51, 102, 0.4);
+}
+
+.app-footer {
+  margin-top: 30px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+/* ==============================================================================
+   SIDEBAR (таблица лидеров и легенда)
+   ============================================================================== */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 280px;
+}
+
+/* ==============================================================================
+   GAME CONTAINER
    ============================================================================== */
 
 .game-container {
@@ -104,14 +142,14 @@ body {
 }
 
 /* ==============================================================================
-   ЗАГОЛОВОК
+   HEADER
    ============================================================================== */
 
 .game-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 }
 
 .game-title {
@@ -134,13 +172,13 @@ body {
 }
 
 /* ==============================================================================
-   ПАНЕЛЬ СЧЁТА
+   SCORE PANEL
    ============================================================================== */
 
 .score-panel {
   display: flex;
-  gap: 40px;
-  padding: 15px 30px;
+  gap: 30px;
+  padding: 15px 25px;
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -163,7 +201,7 @@ body {
 
 .score-value {
   font-family: var(--font-score);
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   color: var(--text-accent);
   text-shadow: 0 0 10px var(--snake-glow);
 }
@@ -173,7 +211,6 @@ body {
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
-/* Анимация при изменении счёта */
 .score-value.bounce {
   animation: scoreBounce 0.3s ease;
 }
@@ -184,7 +221,7 @@ body {
 }
 
 /* ==============================================================================
-   ИГРОВОЕ ПОЛЕ (CANVAS)
+   GAME CANVAS
    ============================================================================== */
 
 .game-canvas-container {
@@ -203,16 +240,8 @@ body {
   border-radius: var(--border-radius);
 }
 
-/* Сетка на поле (опционально) */
-.game-canvas.show-grid {
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 25px 25px;
-}
-
 /* ==============================================================================
-   ОВЕРЛЕИ (START, PAUSE, GAME OVER)
+   OVERLAYS
    ============================================================================== */
 
 .game-overlay {
@@ -225,8 +254,8 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  background: rgba(10, 10, 15, 0.9);
+  gap: 15px;
+  background: rgba(10, 10, 15, 0.92);
   backdrop-filter: blur(5px);
   border-radius: var(--border-radius);
   animation: fadeIn 0.3s ease;
@@ -259,7 +288,7 @@ body {
 
 .overlay-score {
   font-family: var(--font-score);
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: var(--text-primary);
 }
 
@@ -267,17 +296,42 @@ body {
   font-family: var(--font-body);
   font-size: 1rem;
   color: var(--text-secondary);
+  text-align: center;
+  max-width: 300px;
 }
 
 .overlay-hint {
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  opacity: 0.7;
+  opacity: 0.6;
+}
+
+/* Food Preview в стартовом экране */
+.food-preview {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.food-preview-item {
+  font-size: 1.5rem;
+  animation: bounce 1s ease infinite;
+}
+
+.food-preview-item:nth-child(2) { animation-delay: 0.1s; }
+.food-preview-item:nth-child(3) { animation-delay: 0.2s; }
+.food-preview-item:nth-child(4) { animation-delay: 0.3s; }
+.food-preview-item:nth-child(5) { animation-delay: 0.4s; }
+.food-preview-item:nth-child(6) { animation-delay: 0.5s; }
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 /* ==============================================================================
-   КНОПКИ
+   BUTTONS
    ============================================================================== */
 
 .btn {
@@ -308,34 +362,23 @@ body {
   transform: scale(0.98);
 }
 
-.btn-secondary {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--text-secondary);
-}
-
-.btn-secondary:hover {
-  color: var(--text-primary);
-  border-color: var(--text-primary);
-}
-
 /* ==============================================================================
-   ПОДСКАЗКИ УПРАВЛЕНИЯ
+   CONTROLS HINT
    ============================================================================== */
 
 .controls-hint {
   display: flex;
-  gap: 30px;
+  gap: 25px;
   padding: 10px 20px;
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .control-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
@@ -346,46 +389,49 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   font-family: var(--font-score);
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: var(--text-primary);
 }
 
 /* ==============================================================================
-   ТАБЛИЦА ЛИДЕРОВ
+   LEADERBOARD
    ============================================================================== */
 
 .leaderboard {
   width: 100%;
-  max-width: 400px;
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   border-radius: var(--border-radius);
+  border: 1px solid var(--border-glow);
   overflow: hidden;
 }
 
 .leaderboard-header {
   padding: 15px 20px;
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-glow);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .leaderboard-title {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--text-accent);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .leaderboard-list {
-  max-height: 300px;
+  max-height: 280px;
   overflow-y: auto;
 }
 
 .leaderboard-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
+  padding: 10px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: background var(--transition-fast);
 }
@@ -401,7 +447,7 @@ body {
 .leaderboard-rank {
   width: 30px;
   font-family: var(--font-score);
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--text-secondary);
 }
 
@@ -411,65 +457,114 @@ body {
 
 .leaderboard-name {
   flex: 1;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-primary);
 }
 
 .leaderboard-score {
   font-family: var(--font-score);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--text-accent);
 }
 
 .leaderboard-empty {
-  padding: 30px;
+  padding: 25px;
   text-align: center;
   color: var(--text-secondary);
   font-style: italic;
+  font-size: 0.85rem;
 }
 
 /* ==============================================================================
-   АНИМАЦИИ
+   FOOD LEGEND
    ============================================================================== */
 
-/* Пульсация еды */
-@keyframes foodPulse {
-  0%, 100% { 
-    transform: scale(1);
-    box-shadow: 0 0 10px var(--food-glow);
-  }
-  50% { 
-    transform: scale(1.1);
-    box-shadow: 0 0 20px var(--food-glow);
-  }
+.food-legend {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-glow);
+  padding: 15px 20px;
 }
 
-/* Появление частиц при поедании */
-@keyframes particleBurst {
-  0% {
-    opacity: 1;
-    transform: scale(0) translate(0, 0);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1) translate(var(--tx), var(--ty));
-  }
+.legend-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-accent);
+  margin-bottom: 12px;
 }
 
-/* Плавное движение змейки */
-@keyframes snakeMove {
-  from { opacity: 0.8; }
-  to { opacity: 1; }
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.legend-row.crypto span:first-child {
+  font-weight: bold;
+  color: #f7931a;
+}
+
+.legend-points {
+  font-family: var(--font-score);
+  font-size: 0.55rem;
+  color: var(--text-accent);
 }
 
 /* ==============================================================================
-   АДАПТИВНОСТЬ
+   OBSTACLES INFO
    ============================================================================== */
 
-@media (max-width: 600px) {
+.obstacles-info {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  padding: 15px 20px;
+}
+
+.obstacles-info .legend-title {
+  color: var(--obstacle-color);
+}
+
+.info-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ==============================================================================
+   RESPONSIVE
+   ============================================================================== */
+
+@media (max-width: 900px) {
+  .app-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-width: 500px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .sidebar > * {
+    flex: 1 1 200px;
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 550px) {
   .game-container {
     padding: 15px;
-    margin: 10px;
   }
   
   .game-title {
@@ -477,17 +572,25 @@ body {
   }
   
   .score-panel {
-    gap: 20px;
-    padding: 10px 20px;
+    gap: 15px;
+    padding: 10px 15px;
   }
   
   .score-value {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
   
   .controls-hint {
     flex-wrap: wrap;
     justify-content: center;
-    gap: 15px;
+    gap: 10px;
+  }
+
+  .sidebar {
+    flex-direction: column;
+  }
+
+  .sidebar > * {
+    max-width: 100%;
   }
 }

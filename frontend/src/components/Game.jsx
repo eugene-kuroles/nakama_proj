@@ -2,24 +2,24 @@
  * 🎮 Главный компонент игры
  * 
  * Содержит:
- * - Canvas для отрисовки змейки и еды
+ * - Canvas для отрисовки змейки, еды и препятствий
  * - Панель счёта
  * - Оверлеи (Start, Pause, Game Over)
  * - Обработку клавиатуры
  */
 
 import { useRef, useEffect, useCallback } from 'react';
-import { useSnake, DIRECTIONS } from '../hooks/useSnake';
+import { useSnake, FOOD_TYPES } from '../hooks/useSnake';
 import { useGameLoop, useKeyboard } from '../hooks/useGameLoop';
 
 /**
  * Компонент игры Snake
  */
 export function Game() {
-  // Получаем всё состояние и методы из хука
   const {
     snake,
     food,
+    obstacles,
     score,
     highScore,
     speed,
@@ -33,17 +33,13 @@ export function Game() {
     restartGame,
   } = useSnake();
 
-  // Ссылка на canvas элемент
   const canvasRef = useRef(null);
-
-  // Размер canvas в пикселях
   const canvasSize = gridSize * cellSize;
 
   // ============================================================================
   // ИГРОВОЙ ЦИКЛ
   // ============================================================================
   
-  // Запускаем игровой цикл когда игра активна
   useGameLoop(gameStep, speed, gameState === 'playing');
 
   // ============================================================================
@@ -51,19 +47,14 @@ export function Game() {
   // ============================================================================
   
   useKeyboard({
-    // Стрелки
     'ArrowUp': () => changeDirection('UP'),
     'ArrowDown': () => changeDirection('DOWN'),
     'ArrowLeft': () => changeDirection('LEFT'),
     'ArrowRight': () => changeDirection('RIGHT'),
-    
-    // WASD
     'KeyW': () => changeDirection('UP'),
     'KeyS': () => changeDirection('DOWN'),
     'KeyA': () => changeDirection('LEFT'),
     'KeyD': () => changeDirection('RIGHT'),
-    
-    // Пробел — пауза или старт
     'Space': () => {
       if (gameState === 'start') {
         startGame();
@@ -73,8 +64,6 @@ export function Game() {
         togglePause();
       }
     },
-    
-    // Enter — старт/рестарт
     'Enter': () => {
       if (gameState === 'start' || gameState === 'gameover') {
         startGame();
@@ -96,8 +85,11 @@ export function Game() {
     ctx.fillStyle = '#0a0a0f';
     ctx.fillRect(0, 0, canvasSize, canvasSize);
 
-    // Рисуем сетку (опционально, для красоты)
+    // Рисуем сетку
     drawGrid(ctx, canvasSize, cellSize);
+
+    // Рисуем препятствия
+    drawObstacles(ctx, obstacles, cellSize);
 
     // Рисуем еду
     drawFood(ctx, food, cellSize);
@@ -105,12 +97,11 @@ export function Game() {
     // Рисуем змейку
     drawSnake(ctx, snake, cellSize);
 
-  }, [snake, food, canvasSize, cellSize]);
+  }, [snake, food, obstacles, canvasSize, cellSize]);
 
-  // Перерисовываем при изменении состояния
   useEffect(() => {
     draw();
-  }, [draw, snake, food]);
+  }, [draw, snake, food, obstacles]);
 
   // ============================================================================
   // РЕНДЕР
@@ -136,6 +127,12 @@ export function Game() {
           <span className="score-label">Рекорд</span>
           <span className="score-value high-score">{highScore}</span>
         </div>
+        <div className="score-item">
+          <span className="score-label">🚧</span>
+          <span className="score-value" style={{ color: '#ff6b6b', fontSize: '1rem' }}>
+            {obstacles.length}
+          </span>
+        </div>
       </div>
 
       {/* Игровое поле */}
@@ -151,7 +148,14 @@ export function Game() {
         {gameState === 'start' && (
           <div className="game-overlay">
             <div className="overlay-title">🐍 SNAKE</div>
-            <p className="overlay-text">Готовы начать?</p>
+            <p className="overlay-text">Собирай награды, избегай препятствий!</p>
+            <div className="food-preview">
+              {FOOD_TYPES.slice(0, 6).map((f, i) => (
+                <span key={i} className="food-preview-item" title={`${f.points} очков`}>
+                  {f.emoji}
+                </span>
+              ))}
+            </div>
             <button className="btn btn-primary" onClick={startGame}>
               Играть
             </button>
@@ -217,13 +221,11 @@ function drawGrid(ctx, size, cellSize) {
   ctx.lineWidth = 1;
 
   for (let i = 0; i <= size; i += cellSize) {
-    // Вертикальные линии
     ctx.beginPath();
     ctx.moveTo(i, 0);
     ctx.lineTo(i, size);
     ctx.stroke();
 
-    // Горизонтальные линии
     ctx.beginPath();
     ctx.moveTo(0, i);
     ctx.lineTo(size, i);
@@ -232,52 +234,107 @@ function drawGrid(ctx, size, cellSize) {
 }
 
 /**
- * Рисует еду с анимацией пульсации
+ * Рисует препятствия
+ */
+function drawObstacles(ctx, obstacles, cellSize) {
+  obstacles.forEach((obs, index) => {
+    const x = obs.x * cellSize;
+    const y = obs.y * cellSize;
+    const padding = 2;
+    const size = cellSize - padding * 2;
+
+    // Анимация пульсации
+    const pulse = Math.sin(Date.now() / 300 + index) * 0.1 + 0.9;
+
+    // Свечение
+    const gradient = ctx.createRadialGradient(
+      x + cellSize / 2,
+      y + cellSize / 2,
+      0,
+      x + cellSize / 2,
+      y + cellSize / 2,
+      cellSize * pulse
+    );
+    gradient.addColorStop(0, 'rgba(255, 107, 107, 0.4)');
+    gradient.addColorStop(1, 'rgba(255, 107, 107, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - cellSize / 2, y - cellSize / 2, cellSize * 2, cellSize * 2);
+
+    // Препятствие (X-образное)
+    ctx.fillStyle = '#ff6b6b';
+    ctx.shadowColor = '#ff6b6b';
+    ctx.shadowBlur = 10;
+
+    // Рисуем X
+    ctx.save();
+    ctx.translate(x + cellSize / 2, y + cellSize / 2);
+    ctx.rotate(Math.PI / 4);
+    
+    const barWidth = size * 0.25;
+    const barLength = size * 0.8;
+    
+    ctx.fillRect(-barLength / 2, -barWidth / 2, barLength, barWidth);
+    ctx.fillRect(-barWidth / 2, -barLength / 2, barWidth, barLength);
+    
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  });
+}
+
+/**
+ * Рисует еду с разными стилями
  */
 function drawFood(ctx, food, cellSize) {
   const x = food.x * cellSize;
   const y = food.y * cellSize;
-  const padding = 3;
-  const size = cellSize - padding * 2;
+  const centerX = x + cellSize / 2;
+  const centerY = y + cellSize / 2;
+  const size = cellSize - 6;
+
+  // Пульсация
+  const pulse = Math.sin(Date.now() / 200) * 0.15 + 1;
 
   // Свечение
   const gradient = ctx.createRadialGradient(
-    x + cellSize / 2,
-    y + cellSize / 2,
-    0,
-    x + cellSize / 2,
-    y + cellSize / 2,
-    cellSize
+    centerX, centerY, 0,
+    centerX, centerY, cellSize * 1.5
   );
-  gradient.addColorStop(0, 'rgba(255, 51, 102, 0.4)');
-  gradient.addColorStop(1, 'rgba(255, 51, 102, 0)');
+  const color = food.color || '#ff3366';
+  gradient.addColorStop(0, color + '80');
+  gradient.addColorStop(1, color + '00');
 
   ctx.fillStyle = gradient;
-  ctx.fillRect(x - cellSize / 2, y - cellSize / 2, cellSize * 2, cellSize * 2);
+  ctx.fillRect(x - cellSize, y - cellSize, cellSize * 3, cellSize * 3);
 
-  // Сама еда (круг)
-  ctx.fillStyle = '#ff3366';
+  // Фон еды (круг)
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 15;
+  
+  ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(
-    x + cellSize / 2,
-    y + cellSize / 2,
-    size / 2,
-    0,
-    Math.PI * 2
-  );
+  ctx.arc(centerX, centerY, (size / 2) * pulse, 0, Math.PI * 2);
   ctx.fill();
 
-  // Блик
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.beginPath();
-  ctx.arc(
-    x + cellSize / 2 - size / 6,
-    y + cellSize / 2 - size / 6,
-    size / 6,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
+  // Emoji или символ
+  ctx.shadowBlur = 0;
+  ctx.font = `${cellSize * 0.6}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff';
+
+  // Для крипто-символов используем текст
+  if (food.type === 'bitcoin' || food.type === 'ethereum') {
+    ctx.font = `bold ${cellSize * 0.5}px Arial`;
+    ctx.fillText(food.emoji, centerX, centerY);
+  } else {
+    ctx.fillText(food.emoji, centerX, centerY);
+  }
+
+  // Показываем очки над едой
+  ctx.font = `bold ${cellSize * 0.35}px 'Press Start 2P', monospace`;
+  ctx.fillStyle = color;
+  ctx.fillText(`+${food.points}`, centerX, y - 5);
 }
 
 /**
@@ -294,8 +351,8 @@ function drawSnake(ctx, snake, cellSize) {
     // Градиент цвета от головы к хвосту
     const progress = index / snake.length;
     const color = interpolateColor(
-      { r: 0, g: 255, b: 136 },   // Голова: яркий зелёный
-      { r: 0, g: 100, b: 60 },    // Хвост: тёмный зелёный
+      { r: 0, g: 255, b: 136 },
+      { r: 0, g: 100, b: 60 },
       progress
     );
 
@@ -307,7 +364,6 @@ function drawSnake(ctx, snake, cellSize) {
       ctx.shadowBlur = 0;
     }
 
-    // Рисуем сегмент (скруглённый прямоугольник)
     ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
     roundRect(ctx, x, y, size, size, 6);
     ctx.fill();
@@ -318,7 +374,6 @@ function drawSnake(ctx, snake, cellSize) {
     }
   });
 
-  // Сбрасываем тень
   ctx.shadowBlur = 0;
 }
 
@@ -329,7 +384,6 @@ function drawEyes(ctx, head, cellSize, nextSegment) {
   const cx = head.x * cellSize + cellSize / 2;
   const cy = head.y * cellSize + cellSize / 2;
 
-  // Определяем направление взгляда
   let dx = 0, dy = 0;
   if (nextSegment) {
     dx = head.x - nextSegment.x;
@@ -340,26 +394,21 @@ function drawEyes(ctx, head, cellSize, nextSegment) {
   const eyeSize = 3;
   const pupilSize = 1.5;
 
-  // Позиции глаз (зависят от направления)
   let eye1, eye2;
   if (dx !== 0) {
-    // Движение по горизонтали
     eye1 = { x: cx + dx * 3, y: cy - eyeOffset };
     eye2 = { x: cx + dx * 3, y: cy + eyeOffset };
   } else {
-    // Движение по вертикали
     eye1 = { x: cx - eyeOffset, y: cy + dy * 3 };
     eye2 = { x: cx + eyeOffset, y: cy + dy * 3 };
   }
 
-  // Белки глаз
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
   ctx.arc(eye1.x, eye1.y, eyeSize, 0, Math.PI * 2);
   ctx.arc(eye2.x, eye2.y, eyeSize, 0, Math.PI * 2);
   ctx.fill();
 
-  // Зрачки
   ctx.fillStyle = '#000000';
   ctx.beginPath();
   ctx.arc(eye1.x + dx, eye1.y + dy, pupilSize, 0, Math.PI * 2);
@@ -385,7 +434,7 @@ function roundRect(ctx, x, y, width, height, radius) {
 }
 
 /**
- * Интерполяция цвета между двумя значениями
+ * Интерполяция цвета
  */
 function interpolateColor(color1, color2, factor) {
   return {

@@ -3,7 +3,8 @@
  * 
  * Содержит всю логику игры:
  * - Состояние змейки (позиции сегментов)
- * - Состояние еды
+ * - Состояние еды (разные типы)
+ * - Динамические препятствия
  * - Счёт и рекорд
  * - Обработка движения и столкновений
  */
@@ -20,7 +21,23 @@ export const CELL_SIZE = 25;        // Размер одной клетки в �
 export const INITIAL_SPEED = 150;   // Начальная скорость (мс между шагами)
 export const SPEED_INCREMENT = 3;   // Ускорение за каждую съеденную еду
 export const MIN_SPEED = 60;        // Максимальная скорость (минимальная задержка)
-export const POINTS_PER_FOOD = 10;  // Очков за одну еду
+export const INITIAL_OBSTACLES = 5; // Начальное количество препятствий
+export const MAX_OBSTACLES = 15;    // Максимальное количество препятствий
+
+// Типы еды с разными очками и иконками
+export const FOOD_TYPES = [
+  { type: 'apple', emoji: '🍎', points: 10, color: '#ff3366' },
+  { type: 'cherry', emoji: '🍒', points: 15, color: '#ff1493' },
+  { type: 'orange', emoji: '🍊', points: 10, color: '#ff8c00' },
+  { type: 'grape', emoji: '🍇', points: 20, color: '#9b59b6' },
+  { type: 'banana', emoji: '🍌', points: 10, color: '#f1c40f' },
+  { type: 'watermelon', emoji: '🍉', points: 25, color: '#2ecc71' },
+  { type: 'coin', emoji: '🪙', points: 30, color: '#ffd700' },
+  { type: 'gem', emoji: '💎', points: 50, color: '#00d4ff' },
+  { type: 'bitcoin', emoji: '₿', points: 100, color: '#f7931a' },
+  { type: 'ethereum', emoji: 'Ξ', points: 75, color: '#627eea' },
+  { type: 'star', emoji: '⭐', points: 40, color: '#ffeb3b' },
+];
 
 // Направления движения
 export const DIRECTIONS = {
@@ -53,23 +70,60 @@ function randomPosition() {
 }
 
 /**
- * Проверяет, занята ли позиция змейкой
+ * Проверяет, занята ли позиция
  */
-function isPositionOnSnake(position, snake) {
-  return snake.some(segment => 
-    segment.x === position.x && segment.y === position.y
-  );
+function isPositionOccupied(position, snake, obstacles = [], food = null) {
+  // Проверяем змейку
+  if (snake.some(segment => segment.x === position.x && segment.y === position.y)) {
+    return true;
+  }
+  // Проверяем препятствия
+  if (obstacles.some(obs => obs.x === position.x && obs.y === position.y)) {
+    return true;
+  }
+  // Проверяем еду
+  if (food && food.x === position.x && food.y === position.y) {
+    return true;
+  }
+  return false;
 }
 
 /**
- * Генерирует позицию еды, не занятую змейкой
+ * Генерирует позицию, не занятую другими объектами
  */
-function generateFood(snake) {
-  let food;
+function generateFreePosition(snake, obstacles = [], food = null) {
+  let position;
+  let attempts = 0;
   do {
-    food = randomPosition();
-  } while (isPositionOnSnake(food, snake));
-  return food;
+    position = randomPosition();
+    attempts++;
+    if (attempts > 1000) break; // Защита от бесконечного цикла
+  } while (isPositionOccupied(position, snake, obstacles, food));
+  return position;
+}
+
+/**
+ * Генерирует еду случайного типа
+ */
+function generateFood(snake, obstacles) {
+  const position = generateFreePosition(snake, obstacles);
+  const foodType = FOOD_TYPES[Math.floor(Math.random() * FOOD_TYPES.length)];
+  return {
+    ...position,
+    ...foodType,
+  };
+}
+
+/**
+ * Генерирует препятствия
+ */
+function generateObstacles(count, snake) {
+  const obstacles = [];
+  for (let i = 0; i < count; i++) {
+    const position = generateFreePosition(snake, obstacles);
+    obstacles.push(position);
+  }
+  return obstacles;
 }
 
 /**
@@ -99,30 +153,19 @@ export function useSnake() {
   // СОСТОЯНИЕ
   // ============================================================================
   
-  // Змейка: массив координат [{x, y}, {x, y}, ...]
-  // Первый элемент — голова, последний — хвост
   const [snake, setSnake] = useState(getInitialSnake);
-  
-  // Еда: координаты {x, y}
-  const [food, setFood] = useState(() => generateFood(getInitialSnake()));
-  
-  // Текущее направление движения
+  const [food, setFood] = useState(() => {
+    const initialSnake = getInitialSnake();
+    return generateFood(initialSnake, []);
+  });
+  const [obstacles, setObstacles] = useState([]);
   const [direction, setDirection] = useState('RIGHT');
-  
-  // Следующее направление (буфер для плавного управления)
   const [nextDirection, setNextDirection] = useState('RIGHT');
-  
-  // Текущий счёт
   const [score, setScore] = useState(0);
-  
-  // Лучший результат (High Score)
   const [highScore, setHighScore] = useState(0);
-  
-  // Текущая скорость игры (мс между шагами)
   const [speed, setSpeed] = useState(INITIAL_SPEED);
-  
-  // Состояние игры: 'start' | 'playing' | 'paused' | 'gameover'
   const [gameState, setGameState] = useState('start');
+  const [obstacleCount, setObstacleCount] = useState(INITIAL_OBSTACLES);
 
   // ============================================================================
   // ЗАГРУЗКА ЛУЧШЕГО РЕЗУЛЬТАТА ПРИ СТАРТЕ
@@ -143,7 +186,6 @@ export function useSnake() {
   // ============================================================================
   
   const changeDirection = useCallback((newDirection) => {
-    // Нельзя развернуться на 180°
     if (OPPOSITE[newDirection] === direction) {
       return;
     }
@@ -151,18 +193,16 @@ export function useSnake() {
   }, [direction]);
 
   // ============================================================================
-  // ОДИН ШАГ ИГРЫ (вызывается каждый тик)
+  // ОДИН ШАГ ИГРЫ
   // ============================================================================
   
   const gameStep = useCallback(() => {
     if (gameState !== 'playing') return;
 
     setSnake(currentSnake => {
-      // Применяем направление из буфера
       setDirection(nextDirection);
       const dir = DIRECTIONS[nextDirection];
       
-      // Вычисляем новую позицию головы
       const head = currentSnake[0];
       const newHead = {
         x: head.x + dir.x,
@@ -184,10 +224,15 @@ export function useSnake() {
         return currentSnake;
       }
 
-      // Столкновение с собой (проверяем всё тело кроме хвоста)
-      // Хвост не считается, т.к. он сдвинется
+      // Столкновение с собой
       const bodyWithoutTail = currentSnake.slice(0, -1);
-      if (isPositionOnSnake(newHead, bodyWithoutTail)) {
+      if (bodyWithoutTail.some(s => s.x === newHead.x && s.y === newHead.y)) {
+        handleGameOver();
+        return currentSnake;
+      }
+
+      // Столкновение с препятствием
+      if (obstacles.some(obs => obs.x === newHead.x && obs.y === newHead.y)) {
         handleGameOver();
         return currentSnake;
       }
@@ -199,24 +244,28 @@ export function useSnake() {
       const ateFood = newHead.x === food.x && newHead.y === food.y;
       
       if (ateFood) {
-        // Увеличиваем счёт
+        const points = food.points || 10;
+        
         setScore(s => {
-          const newScore = s + POINTS_PER_FOOD;
-          // Обновляем рекорд если побили
+          const newScore = s + points;
           if (newScore > highScore) {
             setHighScore(newScore);
           }
           return newScore;
         });
         
-        // Увеличиваем скорость
         setSpeed(s => Math.max(s - SPEED_INCREMENT, MIN_SPEED));
         
-        // Генерируем новую еду
         const newSnakeWithHead = [newHead, ...currentSnake];
-        setFood(generateFood(newSnakeWithHead));
         
-        // Возвращаем змейку БЕЗ удаления хвоста (она выросла)
+        // Добавляем препятствие каждые 5 съеденных
+        if (currentSnake.length % 5 === 0 && obstacleCount < MAX_OBSTACLES) {
+          setObstacleCount(c => c + 1);
+          setObstacles(obs => [...obs, generateFreePosition(newSnakeWithHead, obs, food)]);
+        }
+        
+        setFood(generateFood(newSnakeWithHead, obstacles));
+        
         return newSnakeWithHead;
       }
 
@@ -224,11 +273,10 @@ export function useSnake() {
       // ОБЫЧНОЕ ДВИЖЕНИЕ
       // ========================================
       
-      // Добавляем новую голову, удаляем хвост
       const newSnake = [newHead, ...currentSnake.slice(0, -1)];
       return newSnake;
     });
-  }, [gameState, nextDirection, food, highScore]);
+  }, [gameState, nextDirection, food, obstacles, highScore, obstacleCount]);
 
   // ============================================================================
   // GAME OVER
@@ -237,8 +285,7 @@ export function useSnake() {
   const handleGameOver = useCallback(async () => {
     setGameState('gameover');
     
-    // Сохраняем результат на сервер
-    const finalScore = score; // Захватываем текущий счёт
+    const finalScore = score;
     if (finalScore > 0) {
       await saveScore('Player', finalScore);
     }
@@ -248,18 +295,21 @@ export function useSnake() {
   // УПРАВЛЕНИЕ ИГРОЙ
   // ============================================================================
   
-  // Начать игру
   const startGame = useCallback(() => {
-    setSnake(getInitialSnake());
-    setFood(generateFood(getInitialSnake()));
+    const initialSnake = getInitialSnake();
+    const initialObstacles = generateObstacles(INITIAL_OBSTACLES, initialSnake);
+    
+    setSnake(initialSnake);
+    setObstacles(initialObstacles);
+    setFood(generateFood(initialSnake, initialObstacles));
     setDirection('RIGHT');
     setNextDirection('RIGHT');
     setScore(0);
     setSpeed(INITIAL_SPEED);
+    setObstacleCount(INITIAL_OBSTACLES);
     setGameState('playing');
   }, []);
 
-  // Пауза/Продолжить
   const togglePause = useCallback(() => {
     if (gameState === 'playing') {
       setGameState('paused');
@@ -268,7 +318,6 @@ export function useSnake() {
     }
   }, [gameState]);
 
-  // Перезапуск после Game Over
   const restartGame = useCallback(() => {
     startGame();
   }, [startGame]);
@@ -278,20 +327,16 @@ export function useSnake() {
   // ============================================================================
   
   return {
-    // Состояние
     snake,
     food,
+    obstacles,
     score,
     highScore,
     speed,
     gameState,
     direction,
-    
-    // Константы (для отрисовки)
     gridSize: GRID_SIZE,
     cellSize: CELL_SIZE,
-    
-    // Методы
     gameStep,
     changeDirection,
     startGame,
