@@ -77,6 +77,9 @@ async def get_calls(
     )
 
 
+from app.models.criteria import Criteria, CriteriaGroup
+
+
 @router.get("/{call_id}", response_model=CallDetailResponse)
 async def get_call(
     call_id: int,
@@ -91,7 +94,7 @@ async def get_call(
         .where(Call.id == call_id)
         .options(
             selectinload(Call.manager),
-            selectinload(Call.scores).selectinload(CallScore.criteria),
+            selectinload(Call.scores).selectinload(CallScore.criteria).selectinload(Criteria.group),
             selectinload(Call.group_averages),
         )
     )

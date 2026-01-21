@@ -24,9 +24,9 @@ class CallScoreResponse(BaseModel):
     id: int
     call_id: int
     criteria_id: int
-    score: str
-    reason: Optional[str]
-    quote: Optional[str]
+    score: Optional[str] = None
+    reason: Optional[str] = None
+    quote: Optional[str] = None
     criteria: Optional[CriteriaResponse] = None
     
     class Config:
@@ -40,13 +40,24 @@ class CallGroupAverageCreate(BaseModel):
     average_percent: Decimal = Field(..., ge=0, le=100)
 
 
+class CriteriaGroupSimple(BaseModel):
+    """Simplified criteria group response (no nested criteria)"""
+    id: int
+    project_id: int
+    name: str
+    order: int
+    
+    class Config:
+        from_attributes = True
+
+
 class CallGroupAverageResponse(BaseModel):
     """Schema for call group average response"""
     id: int
     call_id: int
     group_id: int
-    average_percent: Decimal
-    group: Optional[CriteriaGroupResponse] = None
+    average_percent: Optional[float] = None
+    group: Optional[CriteriaGroupSimple] = None
     
     class Config:
         from_attributes = True

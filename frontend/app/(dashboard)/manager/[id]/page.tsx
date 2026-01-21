@@ -6,7 +6,8 @@ import { PeriodFilter } from "@/types";
 import { PageHeader } from "@/components/dashboard/PageHeader";
 import { KPICard } from "@/components/cards/KPICard";
 import { LineChart } from "@/components/charts/LineChart";
-import { useManagerSummary, useTeamLeaderboard } from "@/hooks/useAnalytics";
+import { useManagerSummary, useTeamLeaderboard, useManagerExamples } from "@/hooks/useAnalytics";
+import { BestWorstExamples } from "@/components/dashboard/BestWorstExamples";
 import { 
   Loader2, 
   AlertCircle, 
@@ -57,6 +58,7 @@ export default function ManagerDetailPage() {
   const { dateFrom, dateTo } = getDateRange();
   const { data, isLoading, error } = useManagerSummary(managerId, dateFrom, dateTo);
   const { data: teamData } = useTeamLeaderboard(dateFrom, dateTo);
+  const { data: examplesData } = useManagerExamples(managerId, dateFrom, dateTo);
 
   // Find manager name from team data
   const managerInfo = teamData?.managers.find(m => m.id === managerId);
@@ -111,6 +113,31 @@ export default function ManagerDetailPage() {
     if (score >= 80) return "bg-emerald-500/20";
     if (score >= 60) return "bg-yellow-500/20";
     return "bg-red-500/20";
+  };
+
+  // Best/Worst Examples from API
+  const bestExamples = examplesData?.best_examples?.map((ex) => ({
+    id: ex.call_id,
+    date: ex.date,
+    duration: ex.duration,
+    score: Math.round(ex.score * 20), // Convert 0-5 to 0-100
+    criteriaName: ex.criteria_name,
+    quote: ex.quote || "",
+    reason: ex.reason || "",
+  })) || [];
+
+  const worstExamples = examplesData?.worst_examples?.map((ex) => ({
+    id: ex.call_id,
+    date: ex.date,
+    duration: ex.duration,
+    score: Math.round(ex.score * 20),
+    criteriaName: ex.criteria_name,
+    quote: ex.quote || "",
+    reason: ex.reason || "",
+  })) || [];
+
+  const handleExampleClick = (example: { id: number }) => {
+    router.push(`/call/${example.id}`);
   };
 
   return (
@@ -252,6 +279,14 @@ export default function ManagerDetailPage() {
           height={350}
         />
       )}
+
+      {/* Best/Worst Examples */}
+      <BestWorstExamples
+        bestExamples={bestExamples}
+        worstExamples={worstExamples}
+        title="📋 Best & Worst Examples"
+        onExampleClick={handleExampleClick}
+      />
 
       {/* Coaching Recommendations */}
       <div className="bg-slate-800/50 backdrop-blur rounded-xl p-6 border border-slate-700/50">

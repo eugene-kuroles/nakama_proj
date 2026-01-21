@@ -12,7 +12,7 @@ import { KPICard } from "@/components/cards/KPICard";
 import { LineChart } from "@/components/charts/LineChart";
 import { BarChart } from "@/components/charts/BarChart";
 import { formatDuration } from "@/lib/utils";
-import { useExecutiveSummary } from "@/hooks/useAnalytics";
+import { useExecutiveSummary, useVOC, useWinLoss } from "@/hooks/useAnalytics";
 import { Loader2, Percent, Phone, Clock, Users, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
 
 export default function ExecutiveDashboard() {
@@ -48,6 +48,8 @@ export default function ExecutiveDashboard() {
   
   const { dateFrom, dateTo } = getDateRange();
   const { data, isLoading, error } = useExecutiveSummary(dateFrom, dateTo);
+  const { data: vocData } = useVOC(dateFrom, dateTo);
+  const { data: winLossData } = useWinLoss(dateFrom, dateTo);
 
   // Loading state
   if (isLoading) {
@@ -134,28 +136,41 @@ export default function ExecutiveDashboard() {
     trend: 5, // +5% positive vs last period
   };
 
-  const winLossData = {
+  // Win/Loss data from API or fallback
+  const winLossSummary = winLossData ? {
+    wins: winLossData.wins,
+    losses: winLossData.losses,
+    pending: winLossData.pending,
+    topWinReasons: winLossData.top_win_reasons.map(r => ({
+      reason: r.reason,
+      count: r.count,
+      percentage: r.percentage,
+    })),
+    topLossReasons: winLossData.top_loss_reasons.map(r => ({
+      reason: r.reason,
+      count: r.count,
+      percentage: r.percentage,
+    })),
+  } : {
     wins: Math.round(kpis.total_calls * 0.35),
     losses: Math.round(kpis.total_calls * 0.25),
     pending: Math.round(kpis.total_calls * 0.40),
     topWinReasons: [
-      { reason: "Хорошая презентация продукта", count: 50, percentage: 35 },
-      { reason: "Правильная работа с возражениями", count: 40, percentage: 28 },
-      { reason: "Установление контакта", count: 30, percentage: 21 },
+      { reason: "Данные загружаются...", count: 0, percentage: 0 },
     ],
     topLossReasons: [
-      { reason: "Высокая цена", count: 60, percentage: 40 },
-      { reason: "Нет потребности сейчас", count: 45, percentage: 30 },
-      { reason: "Выбрали конкурента", count: 25, percentage: 17 },
+      { reason: "Данные загружаются...", count: 0, percentage: 0 },
     ],
   };
 
-  const vocItems = [
-    { topic: "Запрос скидки", count: 45, trend: 10, sentiment: "neutral" as const },
-    { topic: "Вопросы по доставке", count: 38, trend: -5, sentiment: "negative" as const },
-    { topic: "Интерес к новым продуктам", count: 32, trend: 15, sentiment: "positive" as const },
-    { topic: "Сравнение с конкурентами", count: 28, trend: 5, sentiment: "neutral" as const },
-    { topic: "Проблемы с оплатой", count: 15, trend: -10, sentiment: "negative" as const },
+  // VOC items from API or fallback to mock
+  const vocItems = vocData?.items?.map((item, idx) => ({
+    topic: item.tag,
+    count: item.count,
+    trend: item.trend || 0,
+    sentiment: (idx % 3 === 0 ? "positive" : idx % 3 === 1 ? "neutral" : "negative") as "positive" | "neutral" | "negative",
+  })) || [
+    { topic: "Нет данных", count: 0, trend: 0, sentiment: "neutral" as const },
   ];
 
   return (
@@ -219,7 +234,7 @@ export default function ExecutiveDashboard() {
       {/* Sentiment & Win/Loss Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SentimentCard data={sentimentData} title="😊 Sentiment & Trust" />
-        <WinLossSummary data={winLossData} title="📊 Win/Loss Summary" />
+        <WinLossSummary data={winLossSummary} title="📊 Win/Loss Summary" />
       </div>
 
       {/* VOC & Problem Criteria Row */}

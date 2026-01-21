@@ -18,16 +18,27 @@ class CriteriaCreate(BaseModel):
     order: int = 0
 
 
+class CriteriaGroupSimpleResponse(BaseModel):
+    """Simplified criteria group response for nested use"""
+    id: int
+    name: str
+    order: int
+    
+    class Config:
+        from_attributes = True
+
+
 class CriteriaResponse(BaseModel):
     """Schema for criteria response"""
     id: int
     group_id: int
     number: int
     name: str
-    prompt: Optional[str]
+    prompt: Optional[str] = None
     in_final_score: bool
     score_type: ScoreType
     order: int
+    group: Optional[CriteriaGroupSimpleResponse] = None
     
     class Config:
         from_attributes = True

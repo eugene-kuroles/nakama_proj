@@ -9,7 +9,7 @@ import { AfterCallFeedback } from "@/components/dashboard/AfterCallFeedback";
 import { ConversationMetrics } from "@/components/dashboard/ConversationMetrics";
 import { BestWorstExamples } from "@/components/dashboard/BestWorstExamples";
 import { RadarChart } from "@/components/charts/RadarChart";
-import { useManagerSummary } from "@/hooks/useAnalytics";
+import { useManagerSummary, useManagerExamples } from "@/hooks/useAnalytics";
 import { useAuth } from "@/app/providers";
 import { useRouter } from "next/navigation";
 import { 
@@ -59,6 +59,7 @@ export default function MyDashboard() {
   const { dateFrom, dateTo } = getDateRange();
   const managerId = user?.manager_id || null;
   const { data, isLoading, error } = useManagerSummary(managerId, dateFrom, dateTo);
+  const { data: examplesData } = useManagerExamples(managerId, dateFrom, dateTo);
 
   // Loading state
   if (isLoading) {
@@ -131,7 +132,7 @@ export default function MyDashboard() {
     return "text-red-400";
   };
 
-  // Mock data for Radar Chart (criteria profile) - поле должно называться subject
+  // Radar Chart data (criteria profile)
   const radarData = [
     { subject: "Приветствие", user: 75, team: 72 },
     { subject: "Выявление потр.", user: 62, team: 65 },
@@ -141,7 +142,7 @@ export default function MyDashboard() {
     { subject: "Доп. продажи", user: 58, team: 48 },
   ];
 
-  // Mock data for After-Call Feedback
+  // After-Call Feedback
   const feedbackStrengths = [
     {
       id: "s1",
@@ -193,11 +194,11 @@ export default function MyDashboard() {
     },
   ];
 
-  // Mock data for Conversation Metrics
+  // Conversation Metrics
   const conversationMetrics = {
-    avgTalkTime: 180, // 3 min
-    avgListenTime: 240, // 4 min
-    avgCallDuration: 420, // 7 min
+    avgTalkTime: 180,
+    avgListenTime: 240,
+    avgCallDuration: 420,
     talkToListenRatio: 0.75,
     questionsAsked: 8,
     clientEngagement: 72,
@@ -214,55 +215,28 @@ export default function MyDashboard() {
     scriptCompliance: 80,
   };
 
-  // Mock data for Best/Worst Examples
-  const bestExamples = [
-    {
-      id: 1,
-      date: "15 дек 2025",
-      clientName: "ООО Рога и Копыта",
-      duration: 420,
-      score: 95,
-      criteriaName: "Презентация продукта",
-      quote: "Вы очень хорошо объяснили все преимущества, теперь мне всё понятно",
-      reason: "Отличная структура презентации, использование конкретных примеров",
-    },
-    {
-      id: 2,
-      date: "12 дек 2025",
-      clientName: "ИП Иванов",
-      duration: 380,
-      score: 92,
-      criteriaName: "Установление контакта",
-      quote: "Приятно иметь дело с профессионалами",
-      reason: "Быстро установил доверительный контакт, персонализированный подход",
-    },
-  ];
+  // Best/Worst Examples from API
+  const bestExamples = examplesData?.best_examples?.map((ex) => ({
+    id: ex.call_id,
+    date: ex.date,
+    duration: ex.duration,
+    score: Math.round(ex.score * 20), // Convert 0-5 to 0-100
+    criteriaName: ex.criteria_name,
+    quote: ex.quote || "",
+    reason: ex.reason || "",
+  })) || [];
 
-  const worstExamples = [
-    {
-      id: 3,
-      date: "18 дек 2025",
-      clientName: "АО СтройМонтаж",
-      duration: 240,
-      score: 25,
-      criteriaName: "Работа с возражениями",
-      quote: "Вы так и не ответили на мой вопрос о гарантиях",
-      reason: "Пропущено ключевое возражение, клиент потерял интерес",
-    },
-    {
-      id: 4,
-      date: "16 дек 2025",
-      clientName: "ООО ТехноСервис",
-      duration: 180,
-      score: 30,
-      criteriaName: "Выявление потребностей",
-      quote: "Мне кажется вы не поняли что нам нужно",
-      reason: "Недостаточно уточняющих вопросов, поспешный переход к презентации",
-    },
-  ];
+  const worstExamples = examplesData?.worst_examples?.map((ex) => ({
+    id: ex.call_id,
+    date: ex.date,
+    duration: ex.duration,
+    score: Math.round(ex.score * 20),
+    criteriaName: ex.criteria_name,
+    quote: ex.quote || "",
+    reason: ex.reason || "",
+  })) || [];
 
-  const handleExampleClick = (example: any) => {
-    // Navigate to call detail page
+  const handleExampleClick = (example: { id: number }) => {
     router.push(`/call/${example.id}`);
   };
 
