@@ -1,0 +1,3 @@
+"""
+Spellit Backend Application
+"""
