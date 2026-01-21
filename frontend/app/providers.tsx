@@ -104,14 +104,19 @@ export function useProject() {
 }
 
 function ProjectProvider({ children }: { children: ReactNode }) {
-  const [projectId, setProjectId] = useState<number | null>(null);
+  // Default project ID = 1 (Госники)
+  const [projectId, setProjectId] = useState<number | null>(1);
 
   useEffect(() => {
-    // Load from localStorage
+    // Load from localStorage or use default
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("selected_project_id");
       if (saved) {
         setProjectId(Number(saved));
+      } else {
+        // Set default project if none saved
+        setProjectId(1);
+        localStorage.setItem("selected_project_id", "1");
       }
     }
   }, []);
