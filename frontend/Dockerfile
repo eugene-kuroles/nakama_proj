@@ -57,15 +57,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 USER nextjs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # Set hostname
 ENV HOSTNAME="0.0.0.0"
-ENV PORT=3000
+ENV PORT=8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1
 
 # Start the application
 CMD ["node", "server.js"]
