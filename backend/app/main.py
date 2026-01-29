@@ -40,6 +40,7 @@ app.add_middleware(
         "http://localhost:3001",
         "http://localhost:3002",
         "http://localhost:5173",  # Vite default
+        "http://localhost:8080",  # Docker frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],

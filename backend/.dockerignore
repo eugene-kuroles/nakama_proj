@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Tests
+tests/
+test_*.py
+
+# Docs
+*.md
+!README.md
+
+# Alembic versions (keep structure)
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+
+# Misc
+*.log
+*.tmp
+.DS_Store
